@@ -1,0 +1,20 @@
+{
+	"RemapUnityFiles": 
+	{
+		"Module.RAGAssistant.cpp.obj": [
+			"RAGAssistant.init.gen.cpp.obj",
+			"RAGOllamaProvider.gen.cpp.obj",
+			"RAGOllamaRequestStruct.gen.cpp.obj",
+			"RAGOllamaResponseStruct.gen.cpp.obj",
+			"PerModuleInline.gen.cpp.obj",
+			"RAGAssistant.cpp.obj",
+			"FChatAPIAdapter.cpp.obj",
+			"FGenerateAPIAdapter.cpp.obj",
+			"RAGOllamaProvider.cpp.obj",
+			"FOllamaAdapterSelector.cpp.obj",
+			"test.cpp.obj",
+			"FRAGFileUtils.cpp.obj",
+			"RAGChatWidget.cpp.obj"
+		]
+	}
+}

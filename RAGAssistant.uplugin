@@ -1,0 +1,24 @@
+﻿{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "RAGAssistant",
+	"Description": "언리얼 데이터베이스화",
+	"Category": "Other",
+	"CreatedBy": "정우영",
+	"CreatedByURL": "",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"CanContainContent": true,
+	"IsBetaVersion": true,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "RAGAssistant",
+			"Type": "Editor",
+			"LoadingPhase": "Default"
+		}
+	]
+}

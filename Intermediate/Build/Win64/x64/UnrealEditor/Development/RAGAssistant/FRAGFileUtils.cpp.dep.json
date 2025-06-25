@@ -1,0 +1,14 @@
+{
+    "Version": "1.2",
+    "Data": {
+        "Source": "c:\\spartateamprj\\final\\1st-team4-final-project\\plugins\\ragassistant\\source\\ragassistant\\private\\utils\\fragfileutils.cpp",
+        "ProvidedModule": "",
+        "PCH": "c:\\spartateamprj\\final\\1st-team4-final-project\\intermediate\\build\\win64\\x64\\embereditor\\development\\unrealed\\sharedpch.unrealed.project.valapi.cpp20.h.pch",
+        "Includes": [
+            "c:\\spartateamprj\\final\\1st-team4-final-project\\plugins\\ragassistant\\intermediate\\build\\win64\\x64\\unrealeditor\\development\\ragassistant\\definitions.ragassistant.h",
+            "c:\\spartateamprj\\final\\1st-team4-final-project\\plugins\\ragassistant\\source\\ragassistant\\private\\utils\\fragfileutils.h"
+        ],
+        "ImportedModules": [],
+        "ImportedHeaderUnits": []
+    }
+}
