@@ -4,8 +4,8 @@
 #include "UObject/Object.h" // UObject를 상속받기 위해 필요
 #include "Interfaces/IHttpRequest.h" // HTTP 요청을 위한 헤더
 #include "Interfaces/IHttpResponse.h"
-#include "Models/Ollama/RAGOllamaRequestStruct.h" // ⭐ 방금 만든 요청 Struct
-#include "Models/Ollama/RAGOllamaResponseStruct.h" // ⭐ 방금 만든 응답 Struct
+#include "Data/RAGOllamaRequestStruct.h" // ⭐ 방금 만든 요청 Struct
+#include "Data/RAGOllamaResponseStruct.h" // ⭐ 방금 만든 응답 Struct
 #include "RAGOllamaProvider.generated.h"
 
 class IOllamaAPIAdapter; // Ollama API 어댑터 인터페이스를 미리 선언합니다.

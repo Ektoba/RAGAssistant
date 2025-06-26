@@ -3,8 +3,8 @@
 #include "FChatAPIAdapter.h"
 #include "Dom/JsonObject.h"
 #include "Serialization/JsonSerializer.h"
-#include "Models/Ollama/RAGOllamaRequestStruct.h"
-#include "Models/Ollama/RAGOllamaResponseStruct.h"
+#include "Data/RAGOllamaRequestStruct.h"
+#include "Data/RAGOllamaResponseStruct.h"
 
 
 FString FChatAPIAdapter::GetEndpoint() const
