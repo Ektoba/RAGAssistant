@@ -37,13 +37,14 @@ private:
     void ProcessNextChunk();
     void OnChunkEmbeddingGenerated(const TArray<float>& EmbeddingVector);
     void OnAddEmbeddingsToDBSuccess(const FString& ResponseBody);
-
+    void AddEmbeddingsToDB();
     // --- Private Callbacks for the Query Pipeline ---
     void OnQuestionEmbeddingGenerated(const TArray<float>& EmbeddingVector);
     void OnQuerySuccess(const TArray<FString>& RetrievedDocs);
     void OnQueryFailed(const FString& ErrorMessage);
-
+    void OnFinalAnswerGenerated(const FString& FinalAnswer);
     // --- Private Members: Services and State ---
+    void OnIngestionFailed(const FString& ErrorMessage);
     TStrongObjectPtr<URAGOllamaProvider> OllamaProvider;
     TSharedPtr<FChromaDBClient> ChromaDBClient;
 

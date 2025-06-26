@@ -4,14 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "Widgets/SCompoundWidget.h"
-#include "Data/RAGDataTypes.h"
+#include "Core/FRAGEngine.h" // ⭐️ FRAGEngine 헤더를 포함!
 #include "UObject/StrongObjectPtr.h"
 
 // 클래스 전방 선언
 class STextBlock;
 class SEditableTextBox;
-class URAGOllamaProvider;
-class FChromaDBClient;
+// class URAGOllamaProvider; // 이제 필요 없음
+// class FChromaDBClient; // 이제 필요 없음
 
 class SRagChatWidget : public SCompoundWidget
 {
@@ -20,36 +20,24 @@ public:
     SLATE_END_ARGS()
 
     void Construct(const FArguments& InArgs);
+    // ⭐️ 소멸자 추가! 엔진과의 델리게이트 바인딩을 안전하게 해제해주는 게 좋아.
+    ~SRagChatWidget();
 
 private:
-    // --- 멤버 변수 ---
-    TStrongObjectPtr<URAGOllamaProvider> OllamaProvider;
-    TSharedPtr<FChromaDBClient> ChromaDBClient;
+    // --- UI 위젯 ---
     TSharedPtr<STextBlock> ChatHistoryTextBlock;
     TSharedPtr<SEditableTextBox> PromptInputTextBox;
 
-    FChromaCollectionInfo CurrentCollectionInfo;
-    TArray<FString> ScannedFilePaths;
-    TArray<FString> ChunksToProcess;
-    TArray<FRAGIndexedChunk> VectorStore;
-    int32 TotalChunksToProcess = 0;
-    int32 ProcessedChunks = 0;
+    // --- 핵심 로직 담당 ---
+    // ⭐️ 이제 위젯은 엔진에 대한 포인터 하나만 가지면 돼!
+    TSharedPtr<FRAGEngine> RagEngine;
 
-    // --- RAG 기능 함수 (콜백 함수들의 시그니처를 새로운 설계에 맞게 수정!) ---
+    // --- UI 이벤트 핸들러 ---
     FReply OnScanProjectClicked();
-    void ScanAndChunkFiles(const FChromaCollectionInfo& CollectionInfo);
-    void ProcessNextChunk();
-    void OnChunkEmbeddingGenerated(const TArray<float>& EmbeddingVector);
-    void OnChunkEmbeddingFailed(const FString& ErrorMessage);
-    void AddEmbeddingsToDB();
-    void OnAddEmbeddingsSuccess(const FString& ResponseBody);
-    void OnAddEmbeddingsFailed(const FString& ErrorMessage);
-    // ⭐️ CreateCollection 실패 시 전용 콜백 함수 추가
-    void OnCreateCollectionFailed(const FString& ErrorMessage);
-
-
-    // --- 일반 채팅 기능 함수 ---
     FReply OnSendClicked();
-    void OnCompletionGenerated(const FString& GeneratedText);
-    void OnCompletionFailed(const FString& ErrorMessage);
+
+    // --- FRAGEngine의 델리게이트에 연결할 함수들 ---
+    void HandleProgressUpdate(const FString& Message);
+    void HandleNewAIMessage(const FString& Message);
+    void HandlePipelineFailed(const FString& ErrorMessage);
 };
