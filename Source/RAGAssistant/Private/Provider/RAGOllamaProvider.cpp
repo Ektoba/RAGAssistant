@@ -4,8 +4,8 @@
 #include "Interfaces/IHttpResponse.h"        // IHttpResponse에서 HTTP 상태 코드와 내용 가져오기
 #include "Serialization/JsonSerializer.h"    // JSON 직렬화/역직렬화를 위해 필요
 #include "Dom/JsonObject.h"                  // FJsonObject 사용을 위해 필요
-#include "Models/Ollama/RAGOllamaRequestStruct.h" 
-#include "Models/Ollama/RAGOllamaResponseStruct.h" 
+#include "Data/RAGOllamaRequestStruct.h" 
+#include "Data/RAGOllamaResponseStruct.h" 
 #include "Adapter/IOllamaAPIAdapter.h"       // Ollama API 어댑터 인터페이스
 #include "Selector/FOllamaAdapterSelector.h" // Ollama 어댑터 선택기
 // 로그 카테고리 정의

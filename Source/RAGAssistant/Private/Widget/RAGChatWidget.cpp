@@ -8,19 +8,20 @@
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Layout/SScrollBox.h"
 #include "Widgets/SBoxPanel.h" 
+#include "ChromaDB/FChromaDBClient.h"
 
 // --- UI 구성 ---
-
 void SRagChatWidget::Construct(const FArguments& InArgs)
 {
     OllamaProvider = TStrongObjectPtr<URAGOllamaProvider>(NewObject<URAGOllamaProvider>());
     OllamaProvider->InitOllamaProvider(TEXT(""), TEXT(""));
+    ChromaDBClient = MakeShared<FChromaDBClient>();
 
     ChildSlot
         [
             SNew(SVerticalBox)
 
-                // 1. 채팅 기록창
+                // 채팅 기록창
                 + SVerticalBox::Slot()
                 .FillHeight(1.0f)
                 [
@@ -33,7 +34,7 @@ void SRagChatWidget::Construct(const FArguments& InArgs)
                         ]
                 ]
 
-            // 2. 프롬프트 입력창
+            // 프롬프트 입력창
             + SVerticalBox::Slot()
                 .AutoHeight()
                 .Padding(0, 5, 0, 5)
@@ -42,13 +43,12 @@ void SRagChatWidget::Construct(const FArguments& InArgs)
                         .HintText(NSLOCTEXT("RagChat", "PromptHint", "여기에 프롬프트를 입력하세요..."))
                 ]
 
-                // 3. 버튼 영역
+                // 버튼 영역
                 + SVerticalBox::Slot()
                 .AutoHeight()
                 [
                     SNew(SHorizontalBox)
 
-                        // '프로젝트 학습' 버튼
                         + SHorizontalBox::Slot()
                         .FillWidth(1.0f)
                         .Padding(0, 0, 2, 0)
@@ -59,7 +59,6 @@ void SRagChatWidget::Construct(const FArguments& InArgs)
                                 .OnClicked(this, &SRagChatWidget::OnScanProjectClicked)
                         ]
 
-                        // '전송' 버튼
                         + SHorizontalBox::Slot()
                         .FillWidth(1.0f)
                         [
@@ -72,22 +71,40 @@ void SRagChatWidget::Construct(const FArguments& InArgs)
         ];
 }
 
-// --- RAG 기능 (파일 스캔 및 임베딩) ---
+// --- RAG 기능 (파일 스캔, 청킹, 임베딩, DB 저장) ---
 
 FReply SRagChatWidget::OnScanProjectClicked()
 {
-    // 이전 결과들을 초기화
-    ScannedFilePaths.Empty();
-    AllProjectChunks.Empty();
-    VectorStore.Empty();
-    ChunksToProcess.Empty();
-    TotalChunksToProcess = 0;
-    ProcessedChunks = 0;
+    ChatHistoryTextBlock->SetText(FText::FromString(TEXT("[시스템] ChromaDB에 'ember_project' 컬렉션을 생성하거나 가져옵니다...")));
 
+    // ⭐️ 모든 델리게이트를 새로운 짝에 맞게 연결!
+    ChromaDBClient->CreateCollection(
+        TEXT("ember_project"),
+        FChromaDBClient::FOnCreateCollectionSuccess::CreateSP(this, &SRagChatWidget::ScanAndChunkFiles),
+        FChromaDBClient::FOnCreateCollectionFailed::CreateSP(this, &SRagChatWidget::OnCreateCollectionFailed)
+    );
+
+    return FReply::Handled();
+}
+
+void SRagChatWidget::ScanAndChunkFiles(const FChromaCollectionInfo& CollectionInfo)
+{
+    // 컬렉션 정보를 멤버 변수에 저장
+    CurrentCollectionInfo = CollectionInfo;
+
+    UE_LOG(LogTemp, Log, TEXT("Collection ready: %s (ID: %s). Starting file scan."), *CurrentCollectionInfo.Name, *CurrentCollectionInfo.ID);
+    ChatHistoryTextBlock->SetText(FText::FromString(TEXT("[시스템] 컬렉션 준비 완료. 프로젝트 파일 스캔 및 청킹을 시작합니다...")));
+
+    // ⭐️⭐️⭐️ 내가 빼먹었던 바로 그 로직! ⭐️⭐️⭐️
+
+    // 1. 이전 결과 초기화
+    ScannedFilePaths.Empty();
+
+    // 2. 검색할 확장자 정의
     const TArray<FString> ExtensionsToScan = { TEXT("*.h"), TEXT("*.cpp"), TEXT("*.cs"), TEXT("*.uproject"), TEXT("*.uplugin") };
     const FString ProjectDir = FPaths::ProjectDir();
 
-    // 1. Source 와 Plugins 폴더에서 파일들을 검색
+    // 3. Source 와 Plugins 폴더 검색
     const FString SourceDir = FPaths::Combine(ProjectDir, TEXT("Source"));
     FRAGFileUtils::FindProjectFiles(SourceDir, ScannedFilePaths, ExtensionsToScan);
     const FString PluginsDir = FPaths::Combine(ProjectDir, TEXT("Plugins"));
@@ -96,7 +113,7 @@ FReply SRagChatWidget::OnScanProjectClicked()
     TSet<FString> FileSet(ScannedFilePaths);
     ScannedFilePaths = FileSet.Array();
 
-    // 2. 찾은 파일들을 청크로 나눔
+    // 4. 각 파일을 읽고 청크로 나눠서 AllProjectChunks 배열에 추가
     for (const FString& FilePath : ScannedFilePaths)
     {
         FString FileContent;
@@ -107,41 +124,36 @@ FReply SRagChatWidget::OnScanProjectClicked()
         }
     }
 
-    // 3. 청킹이 완료되면, 임베딩 프로세스 시작
+    // 5. 청킹이 완료되면, 연쇄 임베딩 시작
     if (AllProjectChunks.Num() > 0)
     {
+        VectorStore.Empty();
         ChunksToProcess = AllProjectChunks;
         TotalChunksToProcess = ChunksToProcess.Num();
+        ProcessedChunks = 0;
         ProcessNextChunk(); // 연쇄 반응 시작!
     }
     else
     {
         ChatHistoryTextBlock->SetText(FText::FromString(TEXT("[시스템] 학습할 파일을 찾지 못했습니다.")));
     }
-
-    return FReply::Handled();
 }
 
 void SRagChatWidget::ProcessNextChunk()
 {
     if (ProcessedChunks >= TotalChunksToProcess)
     {
-        const FString ResultMessage = FString::Printf(TEXT("[시스템] %d개의 청크에 대한 임베딩 완료! 총 %d개의 벡터가 저장되었습니다."), TotalChunksToProcess, VectorStore.Num());
-        UE_LOG(LogTemp, Log, TEXT("%s"), *ResultMessage);
-        ChatHistoryTextBlock->SetText(FText::FromString(ResultMessage));
+        AddEmbeddingsToDB();
         return;
     }
 
     const FString& CurrentChunk = ChunksToProcess[ProcessedChunks];
-
     const FString ProgressMessage = FString::Printf(TEXT("[시스템] 임베딩 진행 중... (%d / %d)"), ProcessedChunks + 1, TotalChunksToProcess);
     ChatHistoryTextBlock->SetText(FText::FromString(ProgressMessage));
 
-    OllamaProvider->GenerateEmbedding(
-        CurrentChunk,
+    OllamaProvider->GenerateEmbedding(CurrentChunk,
         URAGOllamaProvider::FOnEmbeddingGenerated::CreateSP(this, &SRagChatWidget::OnChunkEmbeddingGenerated),
-        URAGOllamaProvider::FOnOllamaCompletionFailed::CreateSP(this, &SRagChatWidget::OnChunkEmbeddingFailed)
-    );
+        URAGOllamaProvider::FOnOllamaCompletionFailed::CreateSP(this, &SRagChatWidget::OnChunkEmbeddingFailed));
 }
 
 void SRagChatWidget::OnChunkEmbeddingGenerated(const TArray<float>& EmbeddingVector)
@@ -165,6 +177,38 @@ void SRagChatWidget::OnChunkEmbeddingFailed(const FString& ErrorMessage)
     ProcessNextChunk();
 }
 
+void SRagChatWidget::AddEmbeddingsToDB()
+{
+    if (VectorStore.Num() == 0)
+    {
+        ChatHistoryTextBlock->SetText(FText::FromString(TEXT("[시스템] DB에 저장할 벡터가 없습니다.")));
+        return;
+    }
+
+    ChatHistoryTextBlock->SetText(FText::FromString(FString::Printf(TEXT("[시스템] %d개의 벡터를 ChromaDB에 저장합니다..."), VectorStore.Num())));
+
+    // ⭐️ 이제 이름 대신, 저장해뒀던 컬렉션 ID를 사용!
+    ChromaDBClient->AddEmbeddings(
+        CurrentCollectionInfo.ID,
+        VectorStore,
+        FChromaDBClient::FOnChromaDBSuccess::CreateSP(this, &SRagChatWidget::OnAddEmbeddingsSuccess),
+        FChromaDBClient::FOnChromaDBFailed::CreateSP(this, &SRagChatWidget::OnAddEmbeddingsFailed)
+    );
+}
+
+void SRagChatWidget::OnAddEmbeddingsSuccess(const FString& ResponseBody)
+{
+    const FString ResultMessage = FString::Printf(TEXT("[시스템] ChromaDB 저장 완료! 총 %d개의 벡터가 영구적으로 저장되었습니다. 이제 질문할 수 있습니다."), VectorStore.Num());
+    UE_LOG(LogTemp, Log, TEXT("%s"), *ResultMessage);
+    ChatHistoryTextBlock->SetText(FText::FromString(ResultMessage));
+}
+
+void SRagChatWidget::OnAddEmbeddingsFailed(const FString& ErrorMessage)
+{
+    const FString ResultMessage = FString::Printf(TEXT("[시스템][오류] ChromaDB 저장 실패: %s"), *ErrorMessage);
+    UE_LOG(LogTemp, Error, TEXT("%s"), *ResultMessage);
+    ChatHistoryTextBlock->SetText(FText::FromString(ResultMessage));
+}
 
 // --- 일반 채팅 기능 ---
 
