@@ -112,31 +112,6 @@ void SRagChatWidget::ScanAndChunkFiles(const FChromaCollectionInfo& CollectionIn
 
     TSet<FString> FileSet(ScannedFilePaths);
     ScannedFilePaths = FileSet.Array();
-
-    // 4. 각 파일을 읽고 청크로 나눠서 AllProjectChunks 배열에 추가
-    for (const FString& FilePath : ScannedFilePaths)
-    {
-        FString FileContent;
-        if (FFileHelper::LoadFileToString(FileContent, *FilePath))
-        {
-            TArray<FString> Chunks = FRAGFileUtils::ChunkFileContent(FileContent, 40, 5);
-            AllProjectChunks.Append(Chunks);
-        }
-    }
-
-    // 5. 청킹이 완료되면, 연쇄 임베딩 시작
-    if (AllProjectChunks.Num() > 0)
-    {
-        VectorStore.Empty();
-        ChunksToProcess = AllProjectChunks;
-        TotalChunksToProcess = ChunksToProcess.Num();
-        ProcessedChunks = 0;
-        ProcessNextChunk(); // 연쇄 반응 시작!
-    }
-    else
-    {
-        ChatHistoryTextBlock->SetText(FText::FromString(TEXT("[시스템] 학습할 파일을 찾지 못했습니다.")));
-    }
 }
 
 void SRagChatWidget::ProcessNextChunk()
@@ -191,8 +166,8 @@ void SRagChatWidget::AddEmbeddingsToDB()
     ChromaDBClient->AddEmbeddings(
         CurrentCollectionInfo.ID,
         VectorStore,
-        FChromaDBClient::FOnChromaDBSuccess::CreateSP(this, &SRagChatWidget::OnAddEmbeddingsSuccess),
-        FChromaDBClient::FOnChromaDBFailed::CreateSP(this, &SRagChatWidget::OnAddEmbeddingsFailed)
+        FChromaDBClient::FOnAddEmbeddingsSuccess::CreateSP(this, &SRagChatWidget::OnAddEmbeddingsSuccess), // 변경
+        FChromaDBClient::FOnAddEmbeddingsFailed::CreateSP(this, &SRagChatWidget::OnAddEmbeddingsFailed)   // 변경
     );
 }
 
@@ -206,6 +181,13 @@ void SRagChatWidget::OnAddEmbeddingsSuccess(const FString& ResponseBody)
 void SRagChatWidget::OnAddEmbeddingsFailed(const FString& ErrorMessage)
 {
     const FString ResultMessage = FString::Printf(TEXT("[시스템][오류] ChromaDB 저장 실패: %s"), *ErrorMessage);
+    UE_LOG(LogTemp, Error, TEXT("%s"), *ResultMessage);
+    ChatHistoryTextBlock->SetText(FText::FromString(ResultMessage));
+}
+
+void SRagChatWidget::OnCreateCollectionFailed(const FString& ErrorMessage)
+{
+    const FString ResultMessage = FString::Printf(TEXT("[시스템][오류] ChromaDB 컬렉션 생성/가져오기 실패: %s"), *ErrorMessage);
     UE_LOG(LogTemp, Error, TEXT("%s"), *ResultMessage);
     ChatHistoryTextBlock->SetText(FText::FromString(ResultMessage));
 }

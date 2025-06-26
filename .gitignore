@@ -1,0 +1,14 @@
+# 언리얼 엔진 빌드 및 생성 파일
+/Binaries/
+/Intermediate/
+/Saved/
+.vs/
+*.VC.db
+*.VC.opendb
+*.user
+*.log
+
+# 기타 개발 중 생성되는 불필요한 파일 (필요시 추가)
+*.obj
+*.pdb
+*.ipch
